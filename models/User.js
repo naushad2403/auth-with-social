@@ -8,7 +8,13 @@ const userSchema = new mongoose.Schema({
   // socialId: { type: String, unique: true }, // For social logins
   provider: { type: String }, // For storing the provider (Google, Facebook, etc.)
   verificationToken: {type: String},
-  isVerified: {type: Boolean}
+  isVerified: {type: Boolean},
+  // Adding a 'role' field to the schema
+  role: {
+    type: String,
+    enum: ['user', 'author', 'editor'], // Allowed roles
+    default: 'user', // Default role if not specified
+  },
 });
 
 const User = mongoose.model('User', userSchema);

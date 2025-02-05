@@ -34,7 +34,7 @@ router.post('/verify-email', async (req, res) => {
 });
 
 router.post('/register', async (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password, name, role } = req.body;
   const verificationToken = Math.random().toString(36).substring(7);
 
   // Check if email is already registered
@@ -49,7 +49,7 @@ router.post('/register', async (req, res) => {
   // Hash the password with the salt
   const hashedPassword = await bcrypt.hash(password, salt);
 
-  const user = new User({ name, email, password: hashedPassword, verificationToken });
+  const user = new User({ name, email, password: hashedPassword,role, verificationToken });
   await user.save();
 
   // Send reset link via email

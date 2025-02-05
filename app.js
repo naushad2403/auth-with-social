@@ -19,6 +19,7 @@ app.use(
 );
 // Routes
 app.use('/auth', require('./routes/auth'));
+app.use('/api', require('./routes/ex'));
 
 // Home Route
 app.get('/', (req, res) => {
