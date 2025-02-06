@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 const authenticate = (req, res, next) => {
   // Extract the token from the Authorization header
-  const token = req.header('Authorization')?.replace('Bearer ', '');
+  const token = req.header('authorization')?.replace('Bearer ', '');
 
   // If no token is provided, return an unauthorized error
   if (!token) {

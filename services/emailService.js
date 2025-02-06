@@ -16,12 +16,13 @@ const transporter = nodemailer.createTransport({
 console.log( process.env.EMAIL_USER, process.env.EMAIL_PASS );
 
 // Send email function
-const sendEmail = async (to, subject, text) => {
+const sendEmail = async (to, subject, text, html) => {
   const info = await transporter.sendMail({
     from: `"Support" <${process.env.EMAIL_USER}>`,
     to: to,
     subject: subject,
     text: text,
+    html: html
   });
 
   console.log('Message sent: %s', info.messageId);

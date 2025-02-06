@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema({
   // Adding a 'role' field to the schema
   role: {
     type: String,
-    enum: ['user', 'author', 'editor'], // Allowed roles
+    enum: ['user', 'author', 'editor', 'admin'], // Allowed roles
     default: 'user', // Default role if not specified
   },
 });
