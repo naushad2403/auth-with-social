@@ -87,17 +87,20 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ message: 'Account not verified' });
     }
 
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
     res.json({ token });
   } catch (error) {
     handleErrors(res, error, 'Login failed');
   }
 });
+
+
+function getJWTToken(user){
+  const token = jwt.sign(
+    { userId: user?._id, email: user?.email, role: user?.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '1h' }
+  );
+}
 
 // Password Reset Flow
 router.post('/forgot-password', async (req, res) => {
@@ -107,11 +110,7 @@ router.post('/forgot-password', async (req, res) => {
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const resetToken = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
+    const resetToken = getJWTToken(user);
 
     const resetLink = `${FRONTEND_BASE_URL}/reset-password?token=${resetToken}`;
     await sendEmail(
@@ -150,5 +149,20 @@ router.post('/reset-password', async (req, res) => {
     handleErrors(res, error, 'Password reset failed');
   }
 });
+
+
+
+router.get('/reset-password-url', async (req, res) => {
+  const { token } = req.query; // Extract token from the query string
+
+  if (!token) {
+      return res.status(400).send('Invalid request. No token provided.');
+  }
+
+  // Render the HTML template (e.g., reset-password.ejs) with the token passed as a variable
+  res.render('reset-password', { token: token });
+});
+
+
 
 module.exports = router;

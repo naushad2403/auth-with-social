@@ -3,6 +3,7 @@ const express = require('express');
 const sendEmail = require('../services/emailService');
 const User = require('../models/User');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 
 
 router.post('/create-user', async (req, res) => {
@@ -13,21 +14,24 @@ router.post('/create-user', async (req, res) => {
         if (!email || !role) {
             return res.status(400).json({ message: 'Email and role are required' });
         }
-
-        // Create verification token (a random string)
-        const verificationToken = Math.random().toString(36).substring(7);
-
         // Create user with provided details
         const newUser = new User({
             email,
             role,
             name,
-            verificationToken,
             isVerified: true, // User is not verified initially
         });
 
         // Save the user to the database
         await newUser.save();
+
+
+        
+        const verificationToken = jwt.sign(
+          { userId: newUser._id },
+          process.env.JWT_SECRET,
+          { expiresIn: '1h' }
+        );
 
         // Create reset password URL
         //    const resetUrl = `http://localhost:5000/auth/reset-password/${verificationToken}`;
