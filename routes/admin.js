@@ -80,7 +80,7 @@ router.get('/users', async (req, res) => {
         const users = await User.find()
             .skip(skip)
             .limit(limit)
-            .select('email role name isVerified') // Select specific fields
+            .select('name email role bio profilePicture website expertise isBanned isActive bannedAt activatedAt deactivatedAt ') // Select specific fields
             .exec();
 
 
@@ -109,6 +109,52 @@ router.get('/users', async (req, res) => {
             error: error.message
         });
     }
+});
+
+// Middleware for checking if the user exists
+const userExists = async (req, res, next) => {
+  const user = await User.findById(req.params.userId);
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+  req.user = user; // Store the user object in the request for later use
+  next();
+};
+
+// 1. Ban User
+router.put('/ban/:userId', userExists, async (req, res) => {
+  const { user } = req;
+
+  if (user.isBanned) {
+    return res.status(400).json({ message: 'User is already banned' });
+  }
+
+  user.banUser(); // Call the method to ban the user
+  res.status(200).json({ message: 'User has been banned', bannedAt: user.bannedAt });
+});
+
+// 2. Activate User
+router.put('/activate/:userId', userExists, async (req, res) => {
+  const { user } = req;
+
+  if (user.isActive) {
+    return res.status(400).json({ message: 'User is already active' });
+  }
+
+  user.activateUser(); // Call the method to activate the user
+  res.status(200).json({ message: 'User has been activated', activatedAt: user.activatedAt });
+});
+
+// 3. Deactivate User
+router.put('/deactivate/:userId', userExists, async (req, res) => {
+  const { user } = req;
+
+  if (!user.isActive) {
+    return res.status(400).json({ message: 'User is already inactive' });
+  }
+
+  user.deactivateUser(); // Call the method to deactivate the user
+  res.status(200).json({ message: 'User has been deactivated', deactivatedAt: user.deactivatedAt });
 });
 
 

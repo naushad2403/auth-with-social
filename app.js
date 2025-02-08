@@ -23,6 +23,7 @@ app.use(
 // Routes
 app.use('/auth', require('./routes/auth'));
 app.use('/api', require('./routes/ex'));
+app.use('/api/user', require('./routes/user'));
 app.use('/admin',authenticate, checkRole('admin'), require('./routes/admin'));
 
 // Home Route
