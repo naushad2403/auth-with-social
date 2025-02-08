@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema({
   // Basic user info
   name: { type: String, required: true },
   email: { type: String, unique: true, required: true },
-  phone: { type: String, unique: true },
+  phone: { type: String },
   password: { type: String, required: true },
   socialId: { type: String, unique: true }, // For social logins
   provider: { type: String }, // For storing the provider (Google, Facebook, etc.)
@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
   // User roles and permissions
   role: {
     type: String,
-    enum: ['user', 'reporter', 'editor', 'admin'], // Allowed roles
+    enum: ['user', 'reporter', 'author', 'editor', 'admin'], // Allowed roles
     default: 'user', // Default role if not specified
   },
 
