@@ -4,175 +4,151 @@ const User = require('../models/User');
 const sendEmail = require('../services/emailService');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const { FRONTEND_BASE_URL } = process.env;
 
+// Helper functions
+const generateSecureToken = () => crypto.randomBytes(32).toString('hex');
+const hashPassword = async (password) => bcrypt.hash(password, 10);
+const comparePasswords = async (plain, hashed) => bcrypt.compare(plain, hashed);
 
-router.get('/reset-password-url', async (req, res) => {
-    const { token } = req.query; // Extract token from the query string
+// Error handling middleware
+const handleErrors = (res, error, defaultMessage = 'An error occurred') => {
+  console.error(error);
+  res.status(500).json({ message: defaultMessage });
+};
 
-    if (!token) {
-        return res.status(400).send('Invalid request. No token provided.');
+// Registration
+router.post('/register', async (req, res) => {
+  try {
+    const { email, password, name, role } = req.body;
+    const existingUser = await User.findOne({ email });
+    
+    if (existingUser) {
+      return res.status(409).json({ error: 'Email already registered' });
     }
 
-    // Render the HTML template (e.g., reset-password.ejs) with the token passed as a variable
-    res.render('reset-password', { token: token });
-});
+    const verificationToken = generateSecureToken();
+    const hashedPassword = await hashPassword(password);
+    
+    const user = new User({
+      name,
+      email,
+      role,
+      password: hashedPassword,
+      verificationToken,
+    });
 
+    await user.save();
 
-// Email and password login route
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ email });
+    // Send verification email
+    const verificationLink = `${FRONTEND_BASE_URL}/auth/verify-email?token=${verificationToken}`;
+    await sendEmail(
+      email,
+      'Email Verification Request',
+      `Please verify your email: ${verificationLink}`
+    );
 
-  if (user && user.isVerified && bcrypt.compareSync(password, user.password)) {
-    const token = jwt.sign({email: user.email, role: user.role}, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token });
-  } else {
-    res.status(400).json({ message: 'Invalid credentials or not verified yet' });
+    res.status(201).json({ message: 'Registration successful. Check email for verification.' });
+  } catch (error) {
+    handleErrors(res, error, 'Registration failed');
   }
 });
-
-// Add similar routes for Facebook, Twitter, and Instagram
 
 // Email Verification
 router.get('/verify-email', async (req, res) => {
-  const { token } = req.query;
-  const user = await User.findOne({ verificationToken: token });
-  if (!user) return res.status(400).json({ message: 'Invalid token' });
-
-  user.isVerified = true;
-  user.verificationToken = null;
-  await user.save();
-  res.json({ message: 'Email verified successfully' });
-});
-
-router.post('/register', async (req, res) => {
-  const { email, password, name, role } = req.body;
-  const verificationToken = Math.random().toString(36).substring(7);
-
-  // Check if email is already registered
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return res.status(400).json({ error: 'Email is already registered.' });
-  }
-
-  // Generate a salt to hash the password
-  const salt = await bcrypt.genSalt(10);  // 10 is the number of salt rounds, adjust if needed
-
-  // Hash the password with the salt
-  const hashedPassword = await bcrypt.hash(password, salt);
-
-  const user = new User({ name, email, password: hashedPassword,role, verificationToken });
-  await user.save();
-
-  const subject = 'Email Verification Request';
-  const verificationLink = `http://localhost:5000/auth/verify-email?token=${verificationToken}`;
-  const text = `Please verify your email by clicking the following link: ${verificationLink}`;
-  await sendEmail?.(email, subject, text);
-  res.json({ message: 'Registration successful. Please check your email for verification.' });
-});
-
-
-
-// Route to request a password reset
-router.post('/forgot-password', async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ message: 'Email is required' });
-  }
-
   try {
-    // Find the user by email
+    const { token } = req.query;
+    const user = await User.findOne({ verificationToken: token });
+
+    if (!user) return res.status(400).json({ message: 'Invalid verification token' });
+
+    user.isVerified = true;
+    user.verificationToken = null;
+    await user.save();
+
+    res.json({ message: 'Email successfully verified' });
+  } catch (error) {
+    handleErrors(res, error, 'Email verification failed');
+  }
+});
+
+// Login
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
     const user = await User.findOne({ email });
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    if (!user || !(await comparePasswords(password, user.password))) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Generate a password reset token (expires in 1 hour)
-    const resetToken = jwt.sign(
-      { userId: user.id },
+    if (!user.isVerified) {
+      return res.status(403).json({ message: 'Account not verified' });
+    }
+
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    // Create reset password URL
-    const resetUrl = `http://localhost:5000/api/auth/reset-password/${resetToken}`;
-
-    // Send reset link via email
-    const subject = 'Password Reset Request';
-    const text = `You requested a password reset. Click on the following link to reset your password: ${resetUrl}`;
-
-    await sendEmail(user.email, subject, text);
-
-    res.status(200).json({ message: 'Password reset link has been sent to your email' });
+    res.json({ token });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
+    handleErrors(res, error, 'Login failed');
   }
 });
 
-// Handle password reset form submission (POST)
+// Password Reset Flow
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const resetToken = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    const resetLink = `${FRONTEND_BASE_URL}/reset-password?token=${resetToken}`;
+    await sendEmail(
+      email,
+      'Password Reset Request',
+      `Reset your password: ${resetLink}`
+    );
+
+    res.json({ message: 'Password reset link sent to email' });
+  } catch (error) {
+    handleErrors(res, error, 'Password reset request failed');
+  }
+});
+
 router.post('/reset-password', async (req, res) => {
-  const { newPassword, confirmPassword, token } = req.body;
-
-  if (!token) {
-      return res.status(400).send('Invalid request. No token provided.');
-  }
-
-  // Verify the token again before allowing password change
   try {
-      const user =await User.findOne({ verificationToken: token });
+    const { token, newPassword, confirmPassword } = req.body;
 
-      if (!user) {
-          return res.status(400).send('Invalid or expired token.');
-      }
-
-      // Check if passwords match
-      if (newPassword !== confirmPassword) {
-          return res.status(400).send('Passwords do not match. Please try again.');
-      }
-
-      // You can add more password validation (e.g., password strength check)
-
-      // Update the password in the database
-      await updateUserPassword(user.id, newPassword);
-
-      res.send('Your password has been reset successfully.');
-  } catch (error) {
-      console.error(error);
-      return res.status(500).send('An error occurred while resetting your password.');
-  }
-});
-
-// Function to update the user's password
-async function updateUserPassword(userId, newPassword) {
-  try {
-    // Hash the new password
-    const saltRounds = 10; // Number of rounds for bcrypt to generate a salt
-    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
-    // Find the user by ID and update the password
-    const user = await User.findById(userId);
-
-    if (!user) {
-      throw new Error('User not found');
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match' });
     }
 
-    // Update the password
-    user.password = hashedPassword;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId);
 
-    // Save the updated user to the database
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.password = await hashPassword(newPassword);
     await user.save();
 
-    console.log('Password updated successfully');
-    return user;
+    res.json({ message: 'Password successfully updated' });
   } catch (error) {
-    console.error('Error updating password:', error);
-    throw error; // Propagate the error for handling at a higher level
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Reset token has expired' });
+    }
+    handleErrors(res, error, 'Password reset failed');
   }
-}
-
-
+});
 
 module.exports = router;
