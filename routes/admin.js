@@ -68,5 +68,46 @@ router.post('/create-user', async (req, res) => {
     }
 });
 
+// Route to fetch user list with pagination
+router.get('/users', async (req, res) => {
+  try {
+      // Extract query parameters for pagination
+      const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
+      const limit = parseInt(req.query.limit) || 10; // Default to 10 items per page if not provided
+      const skip = (page - 1) * limit; // Calculate the number of documents to skip
+
+      // Fetch users from the database with pagination
+      const users = await User.find()
+          .skip(skip)
+          .limit(limit)
+          .exec();
+
+      // Get the total number of users for pagination metadata
+      const totalUsers = await User.countDocuments();
+
+      // Calculate total pages
+      const totalPages = Math.ceil(totalUsers / limit);
+
+      // Send the response with users and pagination metadata
+      res.status(200).json({
+          success: true,
+          data: users,
+          pagination: {
+              page,
+              limit,
+              totalUsers,
+              totalPages
+          }
+      });
+  } catch (error) {
+      // Handle any errors
+      res.status(500).json({
+          success: false,
+          message: 'Error fetching users',
+          error: error.message
+      });
+  }
+});
+
 
 module.exports = router;

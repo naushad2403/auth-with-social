@@ -87,6 +87,12 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ message: 'Account not verified' });
     }
 
+    const token = jwt.sign(
+              { userId: user._id, email: user.email, role: user.role },
+              process.env.JWT_SECRET,
+              { expiresIn: '1h' }
+            );
+
     res.json({ token });
   } catch (error) {
     handleErrors(res, error, 'Login failed');
