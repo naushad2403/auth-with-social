@@ -40,13 +40,92 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
+     const verificationLink = `${FRONTEND_BASE_URL}/auth/verify-email?token=${verificationToken}`;
 
-    // Send verification email
-    const verificationLink = `${FRONTEND_BASE_URL}/auth/verify-email?token=${verificationToken}`;
+const emailContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Verification</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      text-align: center;
+      padding: 20px 0;
+    }
+    .header h1 {
+      color: #333333;
+      font-size: 24px;
+      margin: 0;
+    }
+    .content {
+      padding: 20px;
+      text-align: center;
+    }
+    .content p {
+      color: #555555;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .button {
+      display: inline-block;
+      margin: 20px 0;
+      padding: 12px 24px;
+      font-size: 16px;
+      color: #ffffff;
+      background-color: #007bff;
+      border-radius: 4px;
+      text-decoration: none;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      color: #888888;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1>Email Verification</h1>
+    </div>
+    <div class="content">
+      <p>Thank you for signing up! Please verify your email address to complete your registration.</p>
+      <a href="${verificationLink}" class="button">Verify Email</a>
+      <p>If the button above doesn't work, you can also copy and paste the following link into your browser:</p>
+      <p><a href="${verificationLink}">${verificationLink}</a></p>
+    </div>
+    <div class="footer">
+      <p>If you did not request this email, you can safely ignore it.</p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+
+   
     await sendEmail(
       email,
       'Email Verification Request',
-      `Please verify your email: ${verificationLink}`
+      `Please verify your email: ${verificationLink}`,
+      emailContent
     );
 
     res.status(201).json({ message: 'Registration successful. Check email for verification.' });
@@ -66,8 +145,75 @@ router.get('/verify-email', async (req, res) => {
     user.isVerified = true;
     user.verificationToken = null;
     await user.save();
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Email Verification</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          background-color: #f4f7fa;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          margin: 0;
+        }
+        .container {
+          text-align: center;
+          background-color: #fff;
+          padding: 40px;
+          border-radius: 8px;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+          width: 100%;
+          max-width: 400px;
+        }
+        h1 {
+          color: #4CAF50;
+          font-size: 2em;
+        }
+        p {
+          color: #555;
+          font-size: 1.1em;
+          margin-top: 20px;
+        }
+        .message {
+          margin-top: 20px;
+          font-size: 1.2em;
+          color: #4CAF50;
+        }
+        .button {
+          margin-top: 30px;
+          padding: 12px 20px;
+          font-size: 1.1em;
+          color: white;
+          background-color: #4CAF50;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          text-decoration: none;
+        }
+        .button:hover {
+          background-color: #45a049;
+        }
+      </style>
+    </head>
+    <body>
 
-    res.json({ message: 'Email successfully verified' });
+      <div class="container">
+        <h1>Email Verified</h1>
+        <p>Thank you for verifying your email address.</p>
+        <p class="message">Your email has been successfully verified!</p>
+      </div>
+
+    </body>
+    </html>
+  `;
+
+  res.send(htmlContent);
   } catch (error) {
     handleErrors(res, error, 'Email verification failed');
   }
