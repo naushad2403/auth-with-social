@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true },
   phone: { type: String },
   password: { type: String, required: true },
-  socialId: { type: String, unique: true }, // For social logins
+  socialId: { type: String }, // For social logins
   provider: { type: String }, // For storing the provider (Google, Facebook, etc.)
   verificationToken: { type: String },
   isVerified: { type: Boolean, default: false }, // Default is false
