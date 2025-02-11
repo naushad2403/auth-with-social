@@ -6,7 +6,6 @@ require('dotenv').config();
 const checkRole = require('./middleware/checkRole');
 const authenticate = require('./middleware/authMiddleware');
 const app = express();
-const cors = require('cors');
 app.set('view engine', 'ejs');  // Make sure to set the view engine for your app
 
 // Enable CORS for all routes
@@ -17,7 +16,6 @@ connectDB();
 app.use(express.urlencoded({ extended: true })); // This is necessary for form data
 // Middleware
 app.use(express.json());
-app.use(cors());
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
