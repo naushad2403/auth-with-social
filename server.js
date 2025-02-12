@@ -12,12 +12,12 @@ app.get('/', (req, res) => {
 
 // SSL options
 const options = {
-  key: fs.readFileSync(path.join(__dirname, 'key.pem')),
-  cert: fs.readFileSync(path.join(__dirname, 'cert.pem'))
+  key: fs.readFileSync(path.join(__dirname, '../key.pem')),
+  cert: fs.readFileSync(path.join(__dirname, '../cert.pem'))
 };
 
 // Create HTTPS server
-const port = 443;
+const port = 5000;
 https.createServer(options, app).listen(port, () => {
   console.log(`HTTPS server running on port ${port}`);
 });
