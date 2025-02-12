@@ -1,6 +1,23 @@
-const app = require('./app');
-const PORT = process.env.PORT || 5000;
+const express = require('express');
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const app = express();
+
+// Define a route
+app.get('/', (req, res) => {
+  res.send('Hello, world! This is an HTTPS-secured Express app.');
+});
+
+// SSL options
+const options = {
+  key: fs.readFileSync(path.join(__dirname, 'key.pem')),
+  cert: fs.readFileSync(path.join(__dirname, 'cert.pem'))
+};
+
+// Create HTTPS server
+const port = 443;
+https.createServer(options, app).listen(port, () => {
+  console.log(`HTTPS server running on port ${port}`);
 });
